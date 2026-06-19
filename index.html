@@ -1,0 +1,1508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CA Conversation Designer</title>
+<style>
+:root {
+  --artifact-background: var(--theme-background, #ffffff);
+  --artifact-background-light: var(--theme-background-light, #f6f6f6);
+  --artifact-background-mid: var(--theme-background-mid, #f0f0f0);
+  --artifact-border-light: var(--theme-border-light, #e5e5e5);
+  --artifact-border-dark: var(--theme-border-dark, #cccccc);
+  --artifact-primary-brand: var(--theme-primary-brand, #343ced);
+  --artifact-primary-highlight: var(--theme-primary-highlight, #1b1b1b);
+  --artifact-primary-hover: var(--theme-primary-hover, #404040);
+  --artifact-selected: var(--theme-selected, #e8e8e8);
+  --artifact-text-primary: var(--theme-text-primary, #1b1b1b);
+  --artifact-text-secondary: var(--theme-text-secondary, #727272);
+  --artifact-step-active: #343ced;
+  --artifact-step-done: #22863a;
+  --artifact-step-inactive: var(--theme-border-dark, #cccccc);
+  --artifact-card-hover: var(--theme-background-mid, #f0f0f0);
+  --artifact-card-selected-bg: #eef0ff;
+  --artifact-card-selected-border: #343ced;
+  --artifact-card-selected-text: #1b1b1b;
+  --artifact-positive: #22863a;
+  --artifact-copy-bg: var(--theme-background-light, #f6f6f6);
+  --artifact-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  --artifact-shadow-raised: 0 2px 12px rgba(0,0,0,0.10);
+}
+html[data-theme='dark'] {
+  --artifact-card-selected-bg: #1a1d3a;
+  --artifact-card-selected-border: #7b84ff;
+  --artifact-card-selected-text: #e8e8e8;
+  --artifact-step-active: #7b84ff;
+  --artifact-step-done: #4caf73;
+  --artifact-copy-bg: var(--theme-background-mid, #2a2a2a);
+  --artifact-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  --artifact-shadow-raised: 0 2px 12px rgba(0,0,0,0.4);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--artifact-background);
+  color: var(--artifact-text-primary);
+  min-height: 100vh;
+  padding: 0 0 40px 0;
+}
+.shell {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* ── Header ── */
+.app-header {
+  padding: 28px 0 20px;
+  border-bottom: 1px solid var(--artifact-border-light);
+  margin-bottom: 28px;
+}
+.app-header h1 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--artifact-text-primary);
+  letter-spacing: -0.02em;
+}
+.app-header p {
+  font-size: 0.85rem;
+  color: var(--artifact-text-secondary);
+  margin-top: 4px;
+}
+
+/* ── Progress bar ── */
+.progress-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 32px;
+  padding: 0 2px;
+}
+.step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
+}
+.step-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--artifact-step-inactive);
+  z-index: 0;
+  transition: background 0.3s;
+}
+.step-item.done:not(:last-child)::after { background: var(--artifact-step-done); }
+.step-item.active:not(:last-child)::after { background: var(--artifact-step-inactive); }
+.step-dot {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--artifact-background);
+  border: 2px solid var(--artifact-step-inactive);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.72rem; font-weight: 600;
+  position: relative; z-index: 1;
+  color: var(--artifact-text-secondary);
+  transition: all 0.2s;
+}
+.step-item.active .step-dot {
+  border-color: var(--artifact-step-active);
+  background: var(--artifact-step-active);
+  color: #ffffff;
+}
+.step-item.done .step-dot {
+  border-color: var(--artifact-step-done);
+  background: var(--artifact-step-done);
+  color: #ffffff;
+}
+.step-label {
+  font-size: 0.68rem;
+  margin-top: 5px;
+  color: var(--artifact-text-secondary);
+  text-align: center;
+  font-weight: 400;
+  white-space: nowrap;
+}
+.step-item.active .step-label { color: var(--artifact-step-active); font-weight: 600; }
+.step-item.done .step-label { color: var(--artifact-step-done); }
+
+/* ── Panels ── */
+.panel { display: none; }
+.panel.active { display: block; }
+.panel-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--artifact-text-primary);
+  margin-bottom: 4px;
+}
+.panel-subtitle {
+  font-size: 0.83rem;
+  color: var(--artifact-text-secondary);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+/* ── Form elements ── */
+.field { margin-bottom: 20px; }
+.field label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--artifact-text-primary);
+  margin-bottom: 6px;
+}
+.field .hint {
+  font-size: 0.75rem;
+  color: var(--artifact-text-secondary);
+  margin-bottom: 6px;
+}
+.field input, .field textarea, .field select {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--artifact-border-dark);
+  border-radius: 6px;
+  font-size: 0.88rem;
+  background: var(--artifact-background);
+  color: var(--artifact-text-primary);
+  outline: none;
+  transition: border-color 0.15s;
+  font-family: inherit;
+}
+.field input:focus, .field textarea:focus, .field select:focus {
+  border-color: var(--artifact-step-active);
+}
+.field textarea { resize: vertical; min-height: 72px; }
+
+/* ── Card grids ── */
+.card-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.card-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.card-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 20px;
+}
+@media (max-width: 600px) {
+  .card-grid, .card-grid-3, .card-grid-4 { grid-template-columns: 1fr 1fr; }
+}
+.choice-card {
+  border: 1.5px solid var(--artifact-border-light);
+  border-radius: 8px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--artifact-background);
+  user-select: none;
+}
+.choice-card:hover { border-color: var(--artifact-border-dark); background: var(--artifact-card-hover); }
+.choice-card.selected {
+  border-color: var(--artifact-card-selected-border);
+  background: var(--artifact-card-selected-bg);
+}
+.choice-card .card-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--artifact-text-primary);
+  margin-bottom: 3px;
+}
+.choice-card .card-desc {
+  font-size: 0.75rem;
+  color: var(--artifact-text-secondary);
+  line-height: 1.4;
+}
+.choice-card .card-ta {
+  font-size: 0.68rem;
+  color: var(--artifact-step-active);
+  margin-top: 4px;
+  font-style: italic;
+}
+.choice-card.selected .card-title { color: var(--artifact-card-selected-text); }
+.choice-card.selected .card-desc { color: var(--artifact-text-secondary); }
+
+/* cultural card compact */
+.cult-card {
+  border: 1.5px solid var(--artifact-border-light);
+  border-radius: 8px;
+  padding: 10px 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--artifact-background);
+  user-select: none;
+  text-align: center;
+}
+.cult-card:hover { border-color: var(--artifact-border-dark); background: var(--artifact-card-hover); }
+.cult-card.selected { border-color: var(--artifact-card-selected-border); background: var(--artifact-card-selected-bg); }
+.cult-card .flag { font-size: 1.3rem; margin-bottom: 4px; }
+.cult-card .cult-name { font-size: 0.75rem; font-weight: 600; color: var(--artifact-text-primary); }
+.cult-card .cult-style { font-size: 0.68rem; color: var(--artifact-text-secondary); line-height: 1.35; margin-top: 2px; }
+
+/* section label */
+.section-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--artifact-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 8px;
+}
+
+/* divider */
+.divider { height: 1px; background: var(--artifact-border-light); margin: 24px 0; }
+
+/* ── Navigation ── */
+.nav {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--artifact-border-light);
+}
+.btn {
+  padding: 9px 22px;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.btn-primary {
+  background: var(--artifact-primary-highlight);
+  color: var(--artifact-background);
+}
+.btn-primary:hover { background: var(--artifact-primary-hover); }
+.btn-ghost {
+  background: transparent;
+  color: var(--artifact-text-secondary);
+  border: 1px solid var(--artifact-border-dark);
+}
+.btn-ghost:hover { background: var(--artifact-background-mid); color: var(--artifact-text-primary); }
+.btn-brand {
+  background: var(--artifact-step-active);
+  color: #ffffff;
+}
+.btn-brand:hover { opacity: 0.88; }
+
+/* ── Prompt panel ── */
+.prompt-box {
+  background: var(--artifact-copy-bg);
+  border: 1px solid var(--artifact-border-light);
+  border-radius: 8px;
+  padding: 16px;
+  font-size: 0.78rem;
+  font-family: 'SF Mono', 'Consolas', monospace;
+  color: var(--artifact-text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 380px;
+  overflow-y: auto;
+  line-height: 1.5;
+}
+.copy-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+.instruction-box {
+  background: var(--artifact-background-light);
+  border-left: 3px solid var(--artifact-step-active);
+  padding: 12px 16px;
+  border-radius: 0 6px 6px 0;
+  font-size: 0.83rem;
+  color: var(--artifact-text-primary);
+  margin-bottom: 20px;
+  line-height: 1.55;
+}
+
+/* ── Transcript panel ── */
+.view-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.toggle-btn {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1.5px solid var(--artifact-border-dark);
+  background: transparent;
+  color: var(--artifact-text-secondary);
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.toggle-btn.active {
+  border-color: var(--artifact-step-active);
+  background: var(--artifact-step-active);
+  color: #ffffff;
+}
+.transcript-readable { display: block; }
+.transcript-json { display: none; }
+
+.turn {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  align-items: flex-start;
+}
+.turn-avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.72rem; font-weight: 700;
+  flex-shrink: 0;
+  color: #ffffff;
+}
+.turn-avatar.agent { background: #343ced; }
+.turn-avatar.customer { background: #22863a; }
+.turn-body { flex: 1; }
+.turn-meta {
+  font-size: 0.7rem;
+  color: var(--artifact-text-secondary);
+  margin-bottom: 3px;
+}
+.turn-text {
+  font-size: 0.87rem;
+  line-height: 1.55;
+  color: var(--artifact-text-primary);
+  background: var(--artifact-background-light);
+  border-radius: 0 8px 8px 8px;
+  padding: 9px 13px;
+}
+.turn.customer .turn-text {
+  background: var(--artifact-background-mid);
+}
+.turn-sentiment {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 0.68rem;
+  padding: 2px 7px;
+  border-radius: 10px;
+  color: #ffffff;
+}
+.breakdown-bar {
+  display: flex;
+  gap: 16px;
+  background: var(--artifact-background-light);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  font-size: 0.78rem;
+}
+.breakdown-item .bi-label { color: var(--artifact-text-secondary); }
+.breakdown-item .bi-val { font-weight: 600; color: var(--artifact-text-primary); font-size: 0.9rem; }
+
+.json-view {
+  background: var(--artifact-copy-bg);
+  border: 1px solid var(--artifact-border-light);
+  border-radius: 8px;
+  padding: 16px;
+  font-size: 0.78rem;
+  font-family: 'SF Mono', 'Consolas', monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 500px;
+  overflow-y: auto;
+  line-height: 1.5;
+  color: var(--artifact-text-primary);
+}
+
+.paste-area {
+  width: 100%;
+  min-height: 120px;
+  padding: 10px 12px;
+  border: 1.5px dashed var(--artifact-border-dark);
+  border-radius: 8px;
+  font-size: 0.83rem;
+  background: var(--artifact-background);
+  color: var(--artifact-text-primary);
+  font-family: 'SF Mono', 'Consolas', monospace;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+  font-family: inherit;
+}
+.paste-area:focus { border-color: var(--artifact-step-active); border-style: solid; }
+
+.error-msg {
+  font-size: 0.78rem;
+  color: #cc3300;
+  margin-top: 6px;
+}
+html[data-theme='dark'] .error-msg { color: #ff7057; }
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.summary-card {
+  background: var(--artifact-background-light);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.summary-card .sc-role {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--artifact-text-secondary);
+  margin-bottom: 6px;
+}
+.summary-card .sc-item {
+  font-size: 0.8rem;
+  color: var(--artifact-text-primary);
+  margin-bottom: 3px;
+}
+.summary-card .sc-item span { color: var(--artifact-text-secondary); }
+
+/* empty state */
+.empty-state {
+  text-align: center;
+  padding: 40px 0;
+  color: var(--artifact-text-secondary);
+  font-size: 0.88rem;
+}
+
+@media print {
+  body { padding: 0.4in 0.6in; background: #fff; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .nav, .view-toggle, .copy-row { display: none !important; }
+  .progress-bar { margin-bottom: 20px; }
+}
+
+/* ── Side-flip transition ── */
+#side-transition {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: linear-gradient(135deg, #343ced 0%, #7b84ff 100%);
+  color: #fff;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px;
+  animation: fadeInOut 2.4s ease forwards;
+}
+#side-transition.show { display: flex; }
+#side-transition .flip-icon {
+  font-size: 3rem;
+  margin-bottom: 20px;
+  animation: spin180 0.6s ease 0.3s both;
+  display: inline-block;
+}
+#side-transition .flip-heading {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  letter-spacing: -0.02em;
+}
+#side-transition .flip-sub {
+  font-size: 1rem;
+  opacity: 0.85;
+  max-width: 360px;
+  line-height: 1.5;
+}
+@keyframes fadeInOut {
+  0%   { opacity: 0; transform: scale(0.96); }
+  15%  { opacity: 1; transform: scale(1); }
+  75%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.02); }
+}
+@keyframes spin180 {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(180deg); }
+}
+
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="app-header">
+    <h1>CA Conversation Designer</h1>
+    <p>Build a customer support call transcript step by step. No prior knowledge needed.</p>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="progress-bar" id="progressBar">
+    <div class="step-item active" data-step="1"><div class="step-dot">1</div><div class="step-label">Context</div></div>
+    <div class="step-item" data-step="2"><div class="step-dot">2</div><div class="step-label">Customer</div></div>
+    <div class="step-item" data-step="3"><div class="step-dot">3</div><div class="step-label">Agent</div></div>
+    <div class="step-item" data-step="4"><div class="step-dot">4</div><div class="step-label">Review</div></div>
+    <div class="step-item" data-step="5"><div class="step-dot">5</div><div class="step-label">Transcript</div></div>
+  </div>
+
+  <!-- ── STEP 1: Context ── -->
+  <div class="panel active" id="panel-1">
+    <div class="panel-title">Set the scene</div>
+    <div class="panel-subtitle">Start by defining the situation. This shapes everything that follows.</div>
+
+    <div class="field">
+      <label>Industry</label>
+      <div class="hint">Select the industry that best matches your scenario. These are drawn from Vonage's real customer base.</div>
+      <select id="industry" onchange="populateTopics()">
+        <option value="">— Select an industry —</option>
+        <optgroup label="★ Priority verticals">
+          <option value="Financial Services &amp; Banking">Financial Services &amp; Banking</option>
+          <option value="Healthcare &amp; Life Sciences">Healthcare &amp; Life Sciences</option>
+          <option value="Technology &amp; SaaS">Technology &amp; SaaS</option>
+          <option value="Retail &amp; eCommerce">Retail &amp; eCommerce</option>
+        </optgroup>
+        <optgroup label="Other verticals">
+          <option value="Insurance">Insurance</option>
+          <option value="Logistics &amp; Transportation">Logistics &amp; Transportation</option>
+          <option value="Travel &amp; Hospitality">Travel &amp; Hospitality</option>
+          <option value="Education">Education</option>
+          <option value="Manufacturing">Manufacturing</option>
+          <option value="Utilities &amp; Energy">Utilities &amp; Energy</option>
+          <option value="Media &amp; Publishing">Media &amp; Publishing</option>
+          <option value="Legal Services">Legal Services</option>
+          <option value="Telecommunications">Telecommunications</option>
+          <option value="Public Sector &amp; Government">Public Sector &amp; Government</option>
+          <option value="Non-profit &amp; Third Sector">Non-profit &amp; Third Sector</option>
+        </optgroup>
+      </select>
+    </div>
+    <div class="field">
+      <label>Topic of the call</label>
+      <div class="hint">Select a topic based on the industry. Your industry must be selected first.</div>
+      <select id="topic" onchange="updateTopicDetail()">
+        <option value="">— Select an industry first —</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Additional detail <span style="font-weight:400;color:#6b7280;font-size:0.85rem;">(optional)</span></label>
+      <div class="hint">Add any specifics that make this scenario more concrete — account numbers, product names, prior interactions, anything that gives the AI more to work with.</div>
+      <textarea id="topic-detail" rows="3" placeholder="e.g. Customer has been waiting 5 days for a refund, previously contacted via chat with no resolution…" style="width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:0.95rem;font-family:inherit;resize:vertical;"></textarea>
+    </div>
+    <div class="field">
+      <label>Expected outcome</label>
+      <select id="outcome" onchange="showOutcomeHint(this.value)">
+        <option value="">— select —</option>
+        <option value="resolved">Resolved — issue fixed, customer genuinely satisfied</option>
+        <option value="false_closure">False closure — customer becomes agreeable and polite but is disengaging, not genuinely satisfied</option>
+        <option value="unresolved">Unresolved — customer remains openly frustrated, nothing fixed</option>
+        <option value="escalated">Escalated — passed to another team or manager</option>
+        <option value="partial">Partially resolved — workaround agreed, full fix pending</option>
+      </select>
+      <div id="outcome-hint" style="display:none;margin-top:10px;padding:12px 14px;border-left:3px solid #f59e0b;background:#fffbeb;border-radius:6px;font-size:0.85rem;color:#92400e;line-height:1.6;">
+        <strong>What is false closure?</strong><br>
+        The customer's issue is not resolved, but at some point they stop pushing and become polite and agreeable — "Yes, OK, thanks very much." They are not satisfied. They have simply decided it is easier to end the call than to keep trying. The agent reads this as success. This pattern is very common and very easy to miss in a real call — and in analytics data.
+      </div>
+    </div>
+    <div class="field">
+      <label>Approximate call length</label>
+      <select id="calllength">
+        <option value="short">Short (~2 minutes)</option>
+        <option value="medium" selected>Medium (~5 minutes)</option>
+        <option value="long">Long (~10 minutes)</option>
+      </select>
+    </div>
+
+    <div class="nav">
+      <div></div>
+      <button class="btn btn-primary" onclick="goToStep(2)">Next: Customer →</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 2: Customer ── -->
+  <div class="panel" id="panel-2">
+    <div class="panel-title">Design the customer</div>
+    <div class="panel-subtitle">Choose how this customer approaches the world and the conversation. Plain-language descriptions — pick what feels right.</div>
+
+    <div class="section-label">How does this customer approach the conversation?</div>
+    <div class="card-grid" id="cust-position">
+      <div class="choice-card" data-group="cust-position" data-value="ok-ok" onclick="selectCard(this)">
+        <div class="card-title">Collaborative problem-solver</div>
+        <div class="card-desc">Treats this as something to work out together. Stays calm, explains clearly, listens to the agent.</div>
+        <div class="card-ta">TA: I'm OK — You're OK</div>
+      </div>
+      <div class="choice-card" data-group="cust-position" data-value="ok-notok" onclick="selectCard(this)">
+        <div class="card-title">Demanding and superior</div>
+        <div class="card-desc">Believes the agent is beneath them or at fault. Uses their position or tone to pressure. Expects deference.</div>
+        <div class="card-ta">TA: I'm OK — You're not OK</div>
+      </div>
+      <div class="choice-card" data-group="cust-position" data-value="notok-ok" onclick="selectCard(this)">
+        <div class="card-title">Apologetic and self-doubting</div>
+        <div class="card-desc">Feels bad for calling. Assumes the problem is probably their own fault. Accepts poor outcomes without pushing back.</div>
+        <div class="card-ta">TA: I'm not OK — You're OK</div>
+      </div>
+      <div class="choice-card" data-group="cust-position" data-value="notok-notok" onclick="selectCard(this)">
+        <div class="card-title">Resigned and disengaged</div>
+        <div class="card-desc">Doesn't expect anything to change. Flat tone, minimal engagement. Calling out of obligation, not hope.</div>
+        <div class="card-ta">TA: I'm not OK — You're not OK</div>
+      </div>
+    </div>
+
+    <div class="section-label">Does this customer play a communication game?</div>
+    <div class="card-grid-3" id="cust-game">
+      <div class="choice-card" data-group="cust-game" data-value="none" onclick="selectCard(this)">
+        <div class="card-title">No game</div>
+        <div class="card-desc">Straightforward — what you see is what you get.</div>
+      </div>
+      <div class="choice-card" data-group="cust-game" data-value="yes-but" onclick="selectCard(this)">
+        <div class="card-title">"Yes, but…"</div>
+        <div class="card-desc">Rejects every solution offered, not because they're wrong — but being stuck feels safer than being helped.</div>
+        <div class="card-ta">TA game: Yes, But</div>
+      </div>
+      <div class="choice-card" data-group="cust-game" data-value="kick-me" onclick="selectCard(this)">
+        <div class="card-title">Sets themselves up to fail</div>
+        <div class="card-desc">Unconsciously creates situations where they'll be poorly treated — it confirms what they already believe about themselves.</div>
+        <div class="card-ta">TA game: Kick Me</div>
+      </div>
+    </div>
+
+    <div class="section-label">Cultural & communication background</div>
+    <div class="card-grid-4" id="cust-culture">
+      <div class="cult-card" data-group="cust-culture" data-value="uk" onclick="selectCard(this)">
+        <div class="flag">🇬🇧</div>
+        <div class="cult-name">UK Professional</div>
+        <div class="cult-style">Understated, indirect on disagreement, polite distance before warmth</div>
+      </div>
+      <div class="cult-card" data-group="cust-culture" data-value="us-south" onclick="selectCard(this)">
+        <div class="flag">🇺🇸</div>
+        <div class="cult-name">US Southern</div>
+        <div class="cult-style">Warm, conversational, unhurried. Politeness is load-bearing — strong feelings expressed softly</div>
+      </div>
+      <div class="cult-card" data-group="cust-culture" data-value="us-rust" onclick="selectCard(this)">
+        <div class="flag">🇺🇸</div>
+        <div class="cult-name">US Midwest</div>
+        <div class="cult-style">Direct, no-frills, straight to the point. Dislikes being managed or given the runaround</div>
+      </div>
+      <div class="cult-card" data-group="cust-culture" data-value="indian" onclick="selectCard(this)">
+        <div class="flag">🇮🇳</div>
+        <div class="cult-name">Indian</div>
+        <div class="cult-style">Formal and respectful, relational warmth before business, discomfort with outright "no"</div>
+      </div>
+      <div class="cult-card" data-group="cust-culture" data-value="polish" onclick="selectCard(this)">
+        <div class="flag">🇵🇱</div>
+        <div class="cult-name">Polish / UK</div>
+        <div class="cult-style">Precise, factual, low small-talk. Formality persists even in English. Direct without aggression</div>
+      </div>
+      <div class="cult-card" data-group="cust-culture" data-value="latino" onclick="selectCard(this)">
+        <div class="flag">🌎</div>
+        <div class="cult-name">Latino</div>
+        <div class="cult-style">Expressive, relationship-first. Personal connection matters before transactions. Escalates with feeling, not volume</div>
+      </div>
+      <div class="cult-card" data-group="cust-culture" data-value="israeli" onclick="selectCard(this)">
+        <div class="flag">🇮🇱</div>
+        <div class="cult-name">Israeli</div>
+        <div class="cult-style">Highly direct, task-focused. Gets to the point fast. Informality is a sign of respect, not disregard</div>
+      </div>
+      <div class="cult-card" data-group="cust-culture" data-value="us-east" onclick="selectCard(this)">
+        <div class="flag">🗽</div>
+        <div class="cult-name">US East Coast</div>
+        <div class="cult-style">Fast-paced, assertive, time-conscious. Efficiency over pleasantries. Directness is not rudeness</div>
+      </div>
+      <div class="cult-card" data-group="cust-culture" data-value="us-west-chinese" onclick="selectCard(this)">
+        <div class="flag">🇺🇸</div>
+        <div class="cult-name">US West Coast / Chinese background</div>
+        <div class="cult-style">Measured and composed. Avoids direct confrontation. Harmony matters — disagreement is expressed through tone and silence, not words</div>
+      </div>
+      <div class="cult-card" data-group="cust-culture" data-value="australian" onclick="selectCard(this)">
+        <div class="flag">🇦🇺</div>
+        <div class="cult-name">Australian</div>
+        <div class="cult-style">Informal and egalitarian. No-nonsense, anti-pretension. Impatient with corporate speak. Humour as social lubricant — even in complaints</div>
+      </div>
+      <div class="cult-card" data-group="cust-culture" data-value="south-african" onclick="selectCard(this)">
+        <div class="flag">🇿🇦</div>
+        <div class="cult-name">South African (non-European)</div>
+        <div class="cult-style">Community and relationship-oriented. Respect registers matter. Directness is earned through rapport. Disengagement follows if trust is broken</div>
+      </div>
+      <div class="cult-card" data-group="cust-culture" data-value="neutral" onclick="selectCard(this)">
+        <div class="flag">—</div>
+        <div class="cult-name">No specific background</div>
+        <div class="cult-style">Let character and life position drive the language without a cultural layer</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Anything else about this customer? (optional)</label>
+      <div class="hint">Age, emotional state, whether they've called before, how long they've waited — anything that adds texture.</div>
+      <textarea id="cust-notes" placeholder="Optional notes…"></textarea>
+    </div>
+
+    <div class="nav">
+      <button class="btn btn-ghost" onclick="goToStep(1)">← Back</button>
+      <button class="btn btn-primary" onclick="showSideTransition()">Next: Agent →</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 3: Agent ── -->
+  <div class="panel" id="panel-3">
+    <div class="panel-title">Design the agent</div>
+    <div class="panel-subtitle">Now define the person on the other end of the line.</div>
+
+    <div class="section-label">How does this agent approach their work?</div>
+    <div class="card-grid" id="agent-position">
+      <div class="choice-card" data-group="agent-position" data-value="ok-ok" onclick="selectCard(this)">
+        <div class="card-title">Grounded and professional</div>
+        <div class="card-desc">Genuinely here to help. Manages own state under pressure. Treats the customer as a capable adult.</div>
+        <div class="card-ta">TA: I'm OK — You're OK</div>
+      </div>
+      <div class="choice-card" data-group="agent-position" data-value="ok-notok" onclick="selectCard(this)">
+        <div class="card-title">Dismissive or patronising</div>
+        <div class="card-desc">Subtly talks down to customers. Follows process more than the person. Can be condescending when challenged.</div>
+        <div class="card-ta">TA: I'm OK — You're not OK</div>
+      </div>
+      <div class="choice-card" data-group="agent-position" data-value="notok-ok" onclick="selectCard(this)">
+        <div class="card-title">Over-apologetic rescuer</div>
+        <div class="card-desc">Over-promises to avoid conflict. Takes on more than they should. Driven by a need to be needed rather than genuine support.</div>
+        <div class="card-ta">TA: I'm not OK — You're OK</div>
+      </div>
+      <div class="choice-card" data-group="agent-position" data-value="notok-notok" onclick="selectCard(this)">
+        <div class="card-title">Burnt out and detached</div>
+        <div class="card-desc">Going through the motions. Low energy, script-heavy, doesn't quite believe the call will go anywhere useful.</div>
+        <div class="card-ta">TA: I'm not OK — You're not OK</div>
+      </div>
+    </div>
+
+    <div class="section-label">How does this agent respond when the conversation gets difficult?</div>
+    <div class="card-grid" id="agent-difficulty">
+      <div class="choice-card" data-group="agent-difficulty" data-value="stays-adult" onclick="selectCard(this)">
+        <div class="card-title">Holds steady</div>
+        <div class="card-desc">Stays calm and factual. Doesn't take the bait if the customer escalates.</div>
+      </div>
+      <div class="choice-card" data-group="agent-difficulty" data-value="mirrors" onclick="selectCard(this)">
+        <div class="card-title">Mirrors the customer</div>
+        <div class="card-desc">Gets pulled into the customer's emotional register — tense if the customer is tense, apologetic if they're upset.</div>
+      </div>
+      <div class="choice-card" data-group="agent-difficulty" data-value="escalates" onclick="selectCard(this)">
+        <div class="card-title">Escalates</div>
+        <div class="card-desc">Becomes more rigid or defensive under pressure. Retreats to process and policy language.</div>
+      </div>
+      <div class="choice-card" data-group="agent-difficulty" data-value="withdraws" onclick="selectCard(this)">
+        <div class="card-title">Withdraws</div>
+        <div class="card-desc">Goes quieter and more passive as things get harder. Avoids direct statements or commitments.</div>
+      </div>
+    </div>
+
+    <div class="section-label">Cultural & communication background</div>
+    <div class="card-grid-4" id="agent-culture">
+      <div class="cult-card" data-group="agent-culture" data-value="uk" onclick="selectCard(this)">
+        <div class="flag">🇬🇧</div>
+        <div class="cult-name">UK Professional</div>
+        <div class="cult-style">Understated, indirect on disagreement, polite distance before warmth</div>
+      </div>
+      <div class="cult-card" data-group="agent-culture" data-value="us-south" onclick="selectCard(this)">
+        <div class="flag">🇺🇸</div>
+        <div class="cult-name">US Southern</div>
+        <div class="cult-style">Warm, conversational, unhurried. Politeness is load-bearing</div>
+      </div>
+      <div class="cult-card" data-group="agent-culture" data-value="us-rust" onclick="selectCard(this)">
+        <div class="flag">🇺🇸</div>
+        <div class="cult-name">US Midwest</div>
+        <div class="cult-style">Direct, no-frills. Gets to resolution fast</div>
+      </div>
+      <div class="cult-card" data-group="agent-culture" data-value="indian" onclick="selectCard(this)">
+        <div class="flag">🇮🇳</div>
+        <div class="cult-name">Indian</div>
+        <div class="cult-style">Formal, respectful, process-oriented with personal warmth</div>
+      </div>
+      <div class="cult-card" data-group="agent-culture" data-value="polish" onclick="selectCard(this)">
+        <div class="flag">🇵🇱</div>
+        <div class="cult-name">Polish / UK</div>
+        <div class="cult-style">Precise, factual, low small-talk. Professional formality</div>
+      </div>
+      <div class="cult-card" data-group="agent-culture" data-value="latino" onclick="selectCard(this)">
+        <div class="flag">🌎</div>
+        <div class="cult-name">Latino</div>
+        <div class="cult-style">Warm and relational. Builds personal connection before solving</div>
+      </div>
+      <div class="cult-card" data-group="agent-culture" data-value="israeli" onclick="selectCard(this)">
+        <div class="flag">🇮🇱</div>
+        <div class="cult-name">Israeli</div>
+        <div class="cult-style">Direct, task-focused, informal as a mark of respect</div>
+      </div>
+      <div class="cult-card" data-group="agent-culture" data-value="us-east" onclick="selectCard(this)">
+        <div class="flag">🗽</div>
+        <div class="cult-name">US East Coast</div>
+        <div class="cult-style">Fast-paced, assertive, efficient. Gets to the point. Directness is professional, not personal</div>
+      </div>
+      <div class="cult-card" data-group="agent-culture" data-value="us-west-chinese" onclick="selectCard(this)">
+        <div class="flag">🇺🇸</div>
+        <div class="cult-name">US West Coast / Chinese background</div>
+        <div class="cult-style">Measured, composed, attentive. Reads the room carefully. Prefers de-escalation through calm tone over assertion</div>
+      </div>
+      <div class="cult-card" data-group="agent-culture" data-value="australian" onclick="selectCard(this)">
+        <div class="flag">🇦🇺</div>
+        <div class="cult-name">Australian</div>
+        <div class="cult-style">Informal and egalitarian. Cuts through corporate script. Uses lightness to defuse tension. Direct but not aggressive</div>
+      </div>
+      <div class="cult-card" data-group="agent-culture" data-value="south-african" onclick="selectCard(this)">
+        <div class="flag">🇿🇦</div>
+        <div class="cult-name">South African (non-European)</div>
+        <div class="cult-style">Warm and community-oriented. Builds trust before moving to resolution. Respectful register throughout. Steady under pressure</div>
+      </div>
+      <div class="cult-card" data-group="agent-culture" data-value="neutral" onclick="selectCard(this)">
+        <div class="flag">—</div>
+        <div class="cult-name">No specific background</div>
+        <div class="cult-style">Character and life position drive the language</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Anything else about this agent? (optional)</label>
+      <div class="hint">Experience level, mood today, whether they know this customer type — any context that shapes how they show up.</div>
+      <textarea id="agent-notes" placeholder="Optional notes…"></textarea>
+    </div>
+
+    <div class="nav">
+      <button class="btn btn-ghost" onclick="goToStep(2)">← Back</button>
+      <button class="btn btn-primary" onclick="goToStep(4)">Next: Review →</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 4: Review & Prompt ── -->
+  <div class="panel" id="panel-4">
+    <div class="panel-title">Review & generate prompt</div>
+    <div class="panel-subtitle">Check your choices, then copy the prompt and paste it into any AI tool (ChatGPT, Claude, Gemini).</div>
+
+    <div class="summary-grid" id="summaryGrid"></div>
+
+    <div class="divider"></div>
+
+    <div class="section-label">Generated AI Prompt</div>
+    <div class="instruction-box">
+      Copy the prompt below → paste it into your AI tool → paste the result back in Step 5.
+    </div>
+    <div class="prompt-box" id="promptBox"></div>
+    <div class="copy-row">
+      <button class="btn btn-brand" onclick="copyPrompt()">Copy prompt</button>
+    </div>
+
+    <div class="nav">
+      <button class="btn btn-ghost" onclick="goToStep(3)">← Back</button>
+      <button class="btn btn-primary" onclick="goToStep(5)">Next: Paste transcript →</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 5: Transcript ── -->
+  <div class="panel" id="panel-5">
+    <div class="panel-title">Your transcript</div>
+    <div class="panel-subtitle">Paste the JSON output from your AI tool below, then click Render.</div>
+
+    <div class="field">
+      <label>Paste AI output here</label>
+      <textarea class="paste-area" id="pasteArea" placeholder="Paste the JSON from your AI tool here…"></textarea>
+      <div class="error-msg" id="parseError"></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:24px;">
+      <button class="btn btn-brand" onclick="renderTranscript()">Render transcript</button>
+      <button class="btn btn-ghost" onclick="clearTranscript()">Clear</button>
+    </div>
+
+    <div id="transcriptOutput" style="display:none;">
+      <div class="view-toggle">
+        <button class="toggle-btn active" id="btnReadable" onclick="switchView('readable')">Readable</button>
+        <button class="toggle-btn" id="btnJson" onclick="switchView('json')">JSON</button>
+      </div>
+      <div class="transcript-readable" id="viewReadable"></div>
+      <div class="transcript-json" id="viewJson"></div>
+    </div>
+
+    <div class="nav">
+      <button class="btn btn-ghost" onclick="goToStep(4)">← Back to prompt</button>
+      <button class="btn btn-ghost" onclick="goToStep(1)">↺ Start over</button>
+    </div>
+  </div>
+
+</div><!-- /.shell -->
+
+<script>
+// ── Outcome hint ──
+function showOutcomeHint(val) {
+  const hint = document.getElementById('outcome-hint');
+  if (hint) hint.style.display = val === 'false_closure' ? 'block' : 'none';
+}
+
+// ── State ──
+const state = {
+  industry: '', topic: '', outcome: '', topicDetail: '', calllength: 'medium',
+  custPosition: null, custGame: null, custCulture: null, custNotes: '',
+  agentPosition: null, agentDifficulty: null, agentCulture: null, agentNotes: '',
+};
+let currentStep = 1;
+
+// ── Navigation ──
+function goToStep(n) {
+  if (n > 1 && !validateStep(currentStep)) return;
+  document.getElementById('panel-' + currentStep).classList.remove('active');
+  currentStep = n;
+  document.getElementById('panel-' + n).classList.add('active');
+  updateProgress();
+  if (n === 4) buildReview();
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function validateStep(step) {
+  if (step === 1) {
+    const ind = document.getElementById('industry').value.trim();
+    const top = document.getElementById('topic').value.trim();
+    const out = document.getElementById('outcome').value;
+    if (!ind || !top || !out) {
+      alert('Please fill in Industry, Topic, and Expected outcome before continuing.');
+      return false;
+    }
+    state.industry = ind;
+    state.topic = top;
+    state.topicDetail = document.getElementById('topic-detail').value.trim();
+    state.outcome = out;
+    state.calllength = document.getElementById('calllength').value;
+  }
+  if (step === 2) {
+    if (!state.custPosition) { alert('Please choose how the customer approaches the conversation.'); return false; }
+    if (!state.custCulture) { alert('Please choose a cultural background for the customer.'); return false; }
+    state.custNotes = document.getElementById('cust-notes').value.trim();
+  }
+  if (step === 3) {
+    if (!state.agentPosition) { alert('Please choose how the agent approaches their work.'); return false; }
+    if (!state.agentDifficulty) { alert('Please choose how the agent responds under difficulty.'); return false; }
+    if (!state.agentCulture) { alert('Please choose a cultural background for the agent.'); return false; }
+    state.agentNotes = document.getElementById('agent-notes').value.trim();
+  }
+  return true;
+}
+
+function updateProgress() {
+  document.querySelectorAll('.step-item').forEach(el => {
+    const s = parseInt(el.dataset.step);
+    el.classList.remove('active','done');
+    if (s === currentStep) el.classList.add('active');
+    else if (s < currentStep) el.classList.add('done');
+  });
+}
+
+// ── Card selection ──
+function selectCard(el) {
+  const group = el.dataset.group;
+  document.querySelectorAll('[data-group="' + group + '"]').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  const val = el.dataset.value;
+  if (group === 'cust-position') state.custPosition = val;
+  else if (group === 'cust-game') state.custGame = val;
+  else if (group === 'cust-culture') state.custCulture = val;
+  else if (group === 'agent-position') state.agentPosition = val;
+  else if (group === 'agent-difficulty') state.agentDifficulty = val;
+  else if (group === 'agent-culture') state.agentCulture = val;
+}
+
+// ── Label helpers ──
+const posLabels = {
+  'ok-ok': 'Collaborative (I\'m OK / You\'re OK)',
+  'ok-notok': 'Demanding (I\'m OK / You\'re not OK)',
+  'notok-ok': 'Apologetic (I\'m not OK / You\'re OK)',
+  'notok-notok': 'Resigned (I\'m not OK / You\'re not OK)'
+};
+const gameLabels = { 'none': 'No game', 'yes-but': 'Yes, But', 'kick-me': 'Kick Me' };
+const cultureLabels = {
+  'uk': 'UK Professional', 'us-south': 'US Southern', 'us-rust': 'US Midwest',
+  'indian': 'Indian', 'polish': 'Polish / UK', 'latino': 'Latino',
+  'israeli': 'Israeli', 'us-east': 'US East Coast',
+  'us-west-chinese': 'US West Coast / Chinese background',
+  'australian': 'Australian', 'south-african': 'South African (non-European)',
+  'neutral': 'No specific background'
+};
+const diffLabels = {
+  'stays-adult': 'Holds steady (Adult state)',
+  'mirrors': 'Mirrors the customer',
+  'escalates': 'Escalates / becomes rigid',
+  'withdraws': 'Withdraws'
+};
+const outLabels = {
+  'resolved': 'Resolved', 'false_closure': 'False closure',
+  'unresolved': 'Unresolved — openly frustrated',
+  'escalated': 'Escalated', 'partial': 'Partially resolved'
+};
+const lengthLabels = { 'short': '~2 minutes', 'medium': '~5 minutes', 'long': '~10 minutes' };
+
+const cultureDescs = {
+  'uk': 'British professional communication style: understated, indirect on disagreement, polite distance before warmth, discomfort with overt emotion, strong preference for understatement ("a bit concerned" can mean very upset)',
+  'us-south': 'US Southern communication style: warm and conversational, unhurried pace, politeness carries significant load (strong feelings expressed softly and indirectly), relationship-building before business',
+  'us-rust': 'US Midwest communication style: direct and no-frills, gets straight to the point, low tolerance for being managed or given the runaround, practical and transactional in tone',
+  'indian': 'Indian communication style: formal and respectful, relational warmth before business, avoids direct "no" in favour of indirect refusal or redirection, high value placed on deference and politeness',
+  'polish': 'Polish communicator speaking in English: precise and factual, low small-talk, formal register persists even in English, direct without aggression, slightly formal sentence construction',
+  'latino': 'Latino communication style (neutral Spanish-speaking background): expressive and relationship-first, personal connection matters before transactions, feelings are expressed openly but with warmth rather than hostility, escalates with emotion not volume',
+  'israeli': 'Israeli communication style: highly direct and task-focused, gets to the point fast, informality is a sign of respect not disregard, minimal social preamble, pushback is direct and not personal',
+  'us-east': 'US East Coast communication style: fast-paced and assertive, values efficiency over social preamble, directness is a mark of respect not aggression, expects the agent to match their pace and get to resolution quickly, time pressure is always implicit',
+  'us-west-chinese': 'US West Coast / Chinese-heritage communication style: composed and measured, avoids direct confrontation, expresses disagreement through tone shift and pauses rather than explicit challenge, values face-saving for both parties, harmony is a goal even in a dispute, silence carries meaning',
+  'australian': 'Australian communication style: informal and deeply egalitarian, strong anti-pretension instinct, corporate or scripted language is received with scepticism or light mockery, uses humour to manage tension, directness is the default but it carries warmth, impatient with runaround but not aggressive',
+  'south-african': 'South African communication style (non-European background): community and relationship-oriented, trust and respect must be established before the transaction can proceed, formal registers are important initially, directness is earned not assumed, disengagement is quiet rather than confrontational if respect is not felt, patience is genuine but finite',
+  'neutral': 'No specific cultural communication layer — let the character\'s life position and ego state shape the language'
+};
+
+// ── Build review & prompt ──
+function buildReview() {
+  const g = document.getElementById('summaryGrid');
+  g.innerHTML = `
+    <div class="summary-card">
+      <div class="sc-role">Context</div>
+      <div class="sc-item"><span>Industry:</span> ${state.industry}</div>
+      <div class="sc-item"><span>Topic:</span> ${state.topic}</div>
+      ${state.topicDetail ? `<div class="sc-item"><span>Detail:</span> ${state.topicDetail}</div>` : ''}
+      <div class="sc-item"><span>Outcome:</span> ${outLabels[state.outcome]||state.outcome}</div>
+      <div class="sc-item"><span>Length:</span> ${lengthLabels[state.calllength]}</div>
+    </div>
+    <div class="summary-card">
+      <div class="sc-role">Customer</div>
+      <div class="sc-item"><span>Position:</span> ${posLabels[state.custPosition]||''}</div>
+      <div class="sc-item"><span>Game:</span> ${gameLabels[state.custGame]||'Not set'}</div>
+      <div class="sc-item"><span>Culture:</span> ${cultureLabels[state.custCulture]||''}</div>
+      ${state.custNotes ? `<div class="sc-item"><span>Notes:</span> ${state.custNotes}</div>` : ''}
+    </div>
+    <div class="summary-card">
+      <div class="sc-role">Agent</div>
+      <div class="sc-item"><span>Position:</span> ${posLabels[state.agentPosition]||''}</div>
+      <div class="sc-item"><span>Under pressure:</span> ${diffLabels[state.agentDifficulty]||''}</div>
+      <div class="sc-item"><span>Culture:</span> ${cultureLabels[state.agentCulture]||''}</div>
+      ${state.agentNotes ? `<div class="sc-item"><span>Notes:</span> ${state.agentNotes}</div>` : ''}
+    </div>
+    <div class="summary-card">
+      <div class="sc-role">Interaction dynamics</div>
+      <div class="sc-item">Customer → Agent: <span>${posLabels[state.custPosition]?.split('(')[0].trim()}</span></div>
+      <div class="sc-item">Agent response: <span>${diffLabels[state.agentDifficulty]}</span></div>
+      ${state.custGame && state.custGame !== 'none' ? `<div class="sc-item">Game in play: <span>${gameLabels[state.custGame]}</span></div>` : ''}
+    </div>`;
+
+  document.getElementById('promptBox').textContent = buildPrompt();
+}
+
+function buildPrompt() {
+  const custCultureDesc = cultureDescs[state.custCulture] || '';
+  const agentCultureDesc = cultureDescs[state.agentCulture] || '';
+  const gameNote = state.custGame && state.custGame !== 'none'
+    ? `The customer is playing the "${gameLabels[state.custGame]}" psychological game (Eric Berne). ` +
+      (state.custGame === 'yes-but'
+        ? 'They will resist or find fault with every solution offered, not because the solutions are bad but because staying stuck is more familiar than being helped.'
+        : 'They unconsciously create situations where they will be treated poorly, confirming their self-concept.')
+    : 'No specific psychological game.';
+
+  const crossNote = (() => {
+    const c = state.custPosition, a = state.agentPosition;
+    if (c === 'ok-notok' && (a === 'stays-adult' || a === 'mirrors'))
+      return 'Note: the customer is speaking from Critical Parent. If the agent stays in Adult (factual, calm) this creates a crossed transaction — the customer expects submission but gets calm professionalism. This tension should be visible in the dialogue.';
+    if (c === 'notok-ok' && a === 'ok-notok')
+      return 'Note: the customer is apologetic and deferential; the agent is dismissive. This is a complementary transaction that reinforces the customer\'s low self-image. Let this play out subtly.';
+    if (c === 'notok-notok' && a === 'notok-ok')
+      return 'Note: the customer is resigned; the agent is a rescuer. The agent will over-invest while the customer remains passive — a mismatch of energy that frustrates the agent.';
+    return 'Note: observe where the ego states of customer and agent align or cross — let this shape the pacing and tone of turns.';
+  })();
+
+  return `You are generating a realistic customer support call transcript in JSON format for a workshop on conversation analysis.
+
+CHARACTER BRIEF
+───────────────
+CUSTOMER
+- Industry context: ${state.industry}
+- Reason for calling: ${state.topic}${state.topicDetail ? '\n- Additional detail: ' + state.topicDetail : ''}
+- Life position: ${posLabels[state.custPosition]} — ${lifeDesc(state.custPosition, 'customer')}
+- Cultural communication style: ${custCultureDesc}
+- Psychological game: ${gameNote}
+${state.custNotes ? '- Additional notes: ' + state.custNotes : ''}
+
+AGENT
+- Life position: ${posLabels[state.agentPosition]} — ${lifeDesc(state.agentPosition, 'agent')}
+- Response to difficulty: ${diffLabels[state.agentDifficulty]}
+- Cultural communication style: ${agentCultureDesc}
+${state.agentNotes ? '- Additional notes: ' + state.agentNotes : ''}
+
+INTERACTION DYNAMICS
+────────────────────
+${crossNote}
+
+CALL PARAMETERS
+───────────────
+- Topic: ${state.topic}${state.topicDetail ? ' — ' + state.topicDetail : ''}
+- Expected outcome: ${outLabels[state.outcome]}
+- Approximate length: ${lengthLabels[state.calllength]}
+
+BEHAVIOURAL INSTRUCTIONS
+────────────────────────
+${state.direction === 'outbound' ? `0. OUTBOUND CALL — the agent opens the call, not the customer. The agent has a prepared agenda (the reason for calling). The customer did not ask to be called and may be neutral, mildly resistant, or openly unwilling to engage. Key TA note: the agent begins in a structurally one-up position (they hold the information and the objective) but the customer holds the power to end the conversation at any moment. The opening exchange should reflect this dynamic — the agent must earn the customer's willingness to continue.` : '0. INBOUND CALL — the customer opens with their reason for calling. The agent responds. The agent is in a reactive position and the customer holds the initial emotional charge.'}
+1. Express each character entirely through their words — do not describe or label their state.
+2. Let the cultural style shape vocabulary, sentence rhythm, and degree of directness. Do NOT use accent spelling or phonetic dialect markers.
+3. Sentiment scores should reflect the emotional arc: customer may start negative and move toward positive (or not), depending on the outcome.
+4. Timing: StartMs and EndMs must be sequential; gaps between turns represent silence. Hold periods or pauses should be reflected in large gaps between turn EndMs and the next turn StartMs.
+5. CallTimeBreakDown Agent + Customer + Silence + CrossTalk should approximately equal total call duration.
+${state.outcome === 'false_closure' ? `6. FALSE CLOSURE — this is the most important behavioural instruction for this transcript:
+   The customer's issue is NOT resolved. However, at a certain point in the call the customer stops pushing back and shifts into polite, agreeable language ("Yes, I see, OK, thanks very much, I appreciate your help"). This is NOT genuine satisfaction — it is an Adapted Child exit strategy (Berne). The customer has decided to disengage rather than continue the effort of the interaction.
+   - The agent should interpret this as a positive resolution and close warmly.
+   - The customer's final sentiment scores should read as mildly positive (0.3–0.6) even though the underlying issue remains open.
+   - Do NOT give the customer any line that explicitly states they are unhappy at the end — the whole point is that the disengagement is invisible on the surface.
+   - Watzlawick note: the content level ("thank you, that's fine") and the relationship level ("I am withdrawing") must be in contradiction — express this only through what the customer chooses NOT to say and how quickly they move toward ending the call.` : ''}
+
+OUTPUT FORMAT
+─────────────
+Return ONLY a valid JSON object with no surrounding text, markdown fences, or explanation:
+
+{
+  "Confidence": <float 0–1>,
+  "Turns": [
+    {
+      "Id": <integer 1-based>,
+      "Speaker": <"Agent" or "Customer">,
+      "Text": <string>,
+      "StartMs": <integer>,
+      "EndMs": <integer>,
+      "Confidence": <float 0–1>,
+      "Sentiment": <float -1 to 1>
+    }
+  ],
+  "CallTimeBreakDown": {
+    "Agent": <seconds>,
+    "Customer": <seconds>,
+    "Silence": <seconds>,
+    "CrossTalk": <seconds>
+  }
+}`;
+}
+
+function lifeDesc(val, role) {
+  const descs = {
+    'ok-ok': role === 'customer'
+      ? 'approaches this as a shared problem to solve; stays calm and clear'
+      : 'genuinely wants to help; manages own state; treats the customer as a capable adult',
+    'ok-notok': role === 'customer'
+      ? 'believes the agent is at fault or beneath them; uses tone or position to pressure'
+      : 'subtly talks down to customers; follows process over person',
+    'notok-ok': role === 'customer'
+      ? 'feels bad for calling; assumes fault is their own; accepts poor outcomes'
+      : 'over-promises to avoid conflict; driven by a need to be needed',
+    'notok-notok': role === 'customer'
+      ? 'resigned, flat tone, not expecting anything to change'
+      : 'going through the motions; script-heavy; low energy'
+  };
+  return descs[val] || '';
+}
+
+// ── Copy prompt ──
+function copyPrompt() {
+  const text = document.getElementById('promptBox').textContent;
+  const btn = document.querySelector('.copy-row .btn');
+  const orig = btn.textContent;
+
+  function onSuccess() {
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => btn.textContent = orig, 2000);
+  }
+
+  function onFail() {
+    btn.textContent = '✗ Select & copy manually';
+    setTimeout(() => btn.textContent = orig, 3000);
+  }
+
+  // Modern clipboard API (HTTPS / localhost)
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(onSuccess).catch(() => {
+      execCopy(text) ? onSuccess() : onFail();
+    });
+  } else {
+    // Fallback for file:// protocol and older browsers
+    execCopy(text) ? onSuccess() : onFail();
+  }
+}
+
+function execCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta);
+  return ok;
+}
+
+// ── Render transcript ──
+function renderTranscript() {
+  const raw = document.getElementById('pasteArea').value.trim();
+  const errEl = document.getElementById('parseError');
+  errEl.textContent = '';
+  if (!raw) { errEl.textContent = 'Please paste the AI output first.'; return; }
+
+  let data;
+  try {
+    // strip markdown fences if present
+    const cleaned = raw.replace(/^```[a-z]*\n?/,'').replace(/```$/,'').trim();
+    data = JSON.parse(cleaned);
+  } catch(e) {
+    errEl.textContent = 'Could not parse JSON: ' + e.message + '. Make sure you paste the raw JSON output from the AI.';
+    return;
+  }
+
+  document.getElementById('transcriptOutput').style.display = 'block';
+  document.getElementById('viewJson').textContent = JSON.stringify(data, null, 2);
+  renderReadable(data);
+  switchView('readable');
+}
+
+function sentimentColor(s) {
+  if (s === null || s === undefined) return '#999999';
+  if (s >= 0.5) return '#22863a';
+  if (s >= 0.1) return '#6a9c50';
+  if (s >= -0.1) return '#888888';
+  if (s >= -0.5) return '#c07020';
+  return '#cc3300';
+}
+
+function sentimentLabel(s) {
+  if (s === null || s === undefined) return '';
+  if (s >= 0.6) return 'positive';
+  if (s >= 0.2) return 'warm';
+  if (s >= -0.2) return 'neutral';
+  if (s >= -0.6) return 'tense';
+  return 'negative';
+}
+
+function msToTime(ms) {
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return m + ':' + String(sec).padStart(2,'0');
+}
+
+function renderReadable(data) {
+  const container = document.getElementById('viewReadable');
+  let html = '';
+
+  // breakdown bar
+  if (data.CallTimeBreakDown) {
+    const b = data.CallTimeBreakDown;
+    html += `<div class="breakdown-bar">
+      <div class="breakdown-item"><div class="bi-label">Agent</div><div class="bi-val">${b.Agent}s</div></div>
+      <div class="breakdown-item"><div class="bi-label">Customer</div><div class="bi-val">${b.Customer}s</div></div>
+      <div class="breakdown-item"><div class="bi-label">Silence</div><div class="bi-val">${b.Silence}s</div></div>
+      <div class="breakdown-item"><div class="bi-label">Crosstalk</div><div class="bi-val">${b.CrossTalk}s</div></div>
+      <div class="breakdown-item"><div class="bi-label">Confidence</div><div class="bi-val">${data.Confidence === -1 ? 'Failed' : (Math.round(data.Confidence*100)+'%')}</div></div>
+    </div>`;
+  }
+
+  if (!data.Turns || data.Turns.length === 0) {
+    html += '<div class="empty-state">No turns found — transcription may have failed.</div>';
+  } else {
+    data.Turns.forEach(t => {
+      const isAgent = t.Speaker === 'Agent';
+      const cls = isAgent ? 'agent' : 'customer';
+      const initials = isAgent ? 'AG' : 'CU';
+      const time = msToTime(t.StartMs);
+      const sentColor = sentimentColor(t.Sentiment);
+      const sentLbl = sentimentLabel(t.Sentiment);
+      const confPct = Math.round((t.Confidence || 0) * 100);
+      html += `<div class="turn ${cls}">
+        <div class="turn-avatar ${cls}">${initials}</div>
+        <div class="turn-body">
+          <div class="turn-meta">${t.Speaker} · ${time} · confidence ${confPct}%</div>
+          <div class="turn-text">${escHtml(t.Text)}</div>
+          ${t.Sentiment !== null && t.Sentiment !== undefined
+            ? `<span class="turn-sentiment" style="background:${sentColor}">${sentLbl} ${t.Sentiment.toFixed(2)}</span>` : ''}
+        </div>
+      </div>`;
+    });
+  }
+  container.innerHTML = html;
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function switchView(mode) {
+  document.getElementById('viewReadable').style.display = mode === 'readable' ? 'block' : 'none';
+  document.getElementById('viewJson').style.display = mode === 'json' ? 'block' : 'none';
+  document.getElementById('btnReadable').classList.toggle('active', mode === 'readable');
+  document.getElementById('btnJson').classList.toggle('active', mode === 'json');
+}
+
+function clearTranscript() {
+  document.getElementById('pasteArea').value = '';
+  document.getElementById('parseError').textContent = '';
+  document.getElementById('transcriptOutput').style.display = 'none';
+}
+
+  // ── Industry → Topics map ──────────────────────────────────────────────
+  const industryTopics = {
+    "Financial Services & Banking": [
+      "Billing dispute on monthly account statement",
+      "Fraud alert and card block request",
+      "Loan or mortgage application status",
+      "Account access or password reset",
+      "Fee waiver or goodwill credit request"
+    ],
+    "Healthcare & Life Sciences": [
+      "Appointment booking or rescheduling",
+      "Prescription refill or medication query",
+      "Insurance pre-authorisation or claim status",
+      "Test results or referral follow-up",
+      "Patient portal access or technical support"
+    ],
+    "Technology & SaaS": [
+      "Product login or authentication failure",
+      "Billing and subscription plan change",
+      "Integration or API technical fault",
+      "Feature request or product feedback",
+      "Onboarding or account setup support"
+    ],
+    "Retail & eCommerce": [
+      "Order status or delivery tracking",
+      "Return, refund or exchange request",
+      "Product availability or stock query",
+      "Loyalty points or discount code issue",
+      "Damaged or incorrect item received"
+    ],
+    "Insurance": [
+      "New policy quote or renewal",
+      "Claim submission or status update",
+      "Policy amendment or cancellation",
+      "Premium payment or direct debit query",
+      "Coverage clarification or benefit query"
+    ],
+    "Logistics & Transportation": [
+      "Shipment tracking or delay update",
+      "Missed or failed delivery rebook",
+      "Customs, duty or import query",
+      "Account invoice or billing dispute",
+      "Driver or depot contact request"
+    ],
+    "Travel & Hospitality": [
+      "Booking amendment or cancellation",
+      "Refund request for cancelled service",
+      "Loyalty programme points or tier query",
+      "Special assistance or accessibility request",
+      "Complaint about stay or service quality"
+    ],
+    "Education": [
+      "Enrolment, admission or application status",
+      "Fee payment plan or financial aid query",
+      "Course content access or technical issue",
+      "Exam result query or grade appeal",
+      "Student support or welfare referral"
+    ],
+    "Manufacturing": [
+      "Spare parts order or delivery status",
+      "Product defect or warranty claim",
+      "Service engineer booking or callout",
+      "Technical specification or compliance query",
+      "Account manager or pricing escalation"
+    ],
+    "Utilities & Energy": [
+      "Billing query or meter reading dispute",
+      "Supply fault or outage report",
+      "Tariff switch or contract renewal",
+      "Direct debit or payment arrangement",
+      "Smart meter installation or data query"
+    ],
+    "Media & Publishing": [
+      "Subscription activation or renewal",
+      "Content access or paywall issue",
+      "Cancellation or downgrade request",
+      "Advertising booking or campaign query",
+      "Technical playback or app support"
+    ],
+    "Legal Services": [
+      "Case status or progress update",
+      "Document submission or missing paperwork",
+      "Fee estimate or invoice query",
+      "Appointment booking with solicitor",
+      "Complaint about service or outcome"
+    ],
+    "Telecommunications": [
+      "Network outage or signal fault",
+      "Roaming charges or billing dispute",
+      "Upgrade or contract renewal offer",
+      "Number porting or SIM swap",
+      "Cancellation or early termination request"
+    ],
+    "Public Sector & Government": [
+      "Benefit claim status or payment query",
+      "Document or certificate request",
+      "Service appointment or callback booking",
+      "Complaint or formal feedback submission",
+      "Eligibility or entitlement query"
+    ],
+    "Non-profit & Third Sector": [
+      "Donation query or payment issue",
+      "Volunteer application or onboarding",
+      "Service referral or eligibility check",
+      "Fundraising event or campaign information",
+      "Complaint or safeguarding concern"
+    ]
+  };
+
+  function populateTopics() {
+    const ind = document.getElementById('industry').value;
+    const topicSel = document.getElementById('topic');
+    topicSel.innerHTML = '';
+    if (!ind || !industryTopics[ind]) {
+      const ph = document.createElement('option');
+      ph.value = ''; ph.textContent = '— Select an industry first —';
+      topicSel.appendChild(ph);
+      return;
+    }
+    const placeholder = document.createElement('option');
+    placeholder.value = ''; placeholder.textContent = '— Select a topic —';
+    topicSel.appendChild(placeholder);
+    industryTopics[ind].forEach(function(t) {
+      const opt = document.createElement('option');
+      opt.value = t; opt.textContent = t;
+      topicSel.appendChild(opt);
+    });
+  }
+
+  function updateTopicDetail() {}
+
+</script>
+
+<script>
+window.GleanBridge.postMessage({ actionId:'export-pdf', type:'glean-add-menu', metadata:{ label:'Export as PDF', icon:'export' } });
+window.GleanBridge.onMessage('action', function(data) { if(data.actionId==='export-pdf') window.print(); });
+
+function showSideTransition() {
+  if (!validateStep(2)) return;
+  const overlay = document.getElementById('side-transition');
+  overlay.classList.add('show');
+  setTimeout(() => {
+    overlay.classList.remove('show');
+    goToStep(3);
+  }, 2400);
+}
+
+</script>
+
+<style>
+@media print {
+  body { margin:0; padding:0.4in 0.6in; background:#fff; print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+  .nav, .view-toggle, .copy-row { display:none !important; }
+}
+</style>
+
+<!-- ── Side transition overlay ── -->
+<div id="side-transition">
+  <div class="flip-icon">🔄</div>
+  <div class="flip-heading">Now — the other side of the line</div>
+  <div class="flip-sub">You've defined the customer. Time to design the agent who will take this call.</div>
+</div>
+
+</body>
+</html>
